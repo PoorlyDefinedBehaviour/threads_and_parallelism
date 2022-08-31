@@ -7,3 +7,10 @@ edition = "2021"
 
 [dependencies]
 
+[dev-dependencies]
+criterion = "0.3.0"
+
+[[bench]]
+name = "my_benchmark"
+path = "./benches/my_benchmark.rs"
+harness = false
