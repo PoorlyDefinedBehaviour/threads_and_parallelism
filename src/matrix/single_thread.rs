@@ -1,6 +1,6 @@
 use super::Matrix;
 
-pub fn multiply<T: std::ops::Mul<Output = T> + Default + Copy>(
+pub fn multiply<T: std::ops::Mul<Output = T> + Send + Default + Copy>(
   m1: impl Into<Matrix<T>>,
   m2: impl Into<Matrix<T>>,
 ) -> Matrix<T> {

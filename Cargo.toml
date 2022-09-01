@@ -6,11 +6,18 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+num_cpus = "1.13.1"
 
 [dev-dependencies]
 criterion = "0.3.0"
+rand = "0.8.5"
 
 [[bench]]
-name = "my_benchmark"
-path = "./benches/my_benchmark.rs"
+name = "matrix_single_thread"
+path = "./benches/matrix_single_thread.rs"
+harness = false
+
+[[bench]]
+name = "matrix_multi_thread"
+path = "./benches/matrix_multi_thread.rs"
 harness = false

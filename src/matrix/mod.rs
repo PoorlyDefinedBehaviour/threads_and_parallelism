@@ -4,12 +4,12 @@ pub mod single_thread;
 #[derive(Debug, PartialEq, Eq)]
 pub struct Matrix<T>
 where
-  T: std::ops::Mul,
+  T: std::ops::Mul + Send,
 {
   elements: Vec<Vec<T>>,
 }
 
-impl<T: std::ops::Mul + Default + Copy> Matrix<T> {
+impl<T: std::ops::Mul + Default + Copy + Send> Matrix<T> {
   pub fn new(size: usize) -> Self {
     Self {
       elements: (0..size)
@@ -23,13 +23,13 @@ impl<T: std::ops::Mul + Default + Copy> Matrix<T> {
   }
 }
 
-impl<T: std::ops::Mul> From<Vec<Vec<T>>> for Matrix<T> {
+impl<T: std::ops::Mul + Send> From<Vec<Vec<T>>> for Matrix<T> {
   fn from(elements: Vec<Vec<T>>) -> Self {
     Self { elements }
   }
 }
 
-impl<T: std::ops::Mul + Clone, const N: usize> From<[[T; N]; N]> for Matrix<T> {
+impl<T: std::ops::Mul + Send + Clone, const N: usize> From<[[T; N]; N]> for Matrix<T> {
   fn from(elements: [[T; N]; N]) -> Self {
     Self {
       elements: elements.into_iter().map(|row| row.to_vec()).collect(),
