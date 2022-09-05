@@ -13,4 +13,4 @@ cargo install cargo-criterion
 cargo criterion
 ```
 
-open `target/reports/index.html`
+open `target/criterion/reports/index.html`
