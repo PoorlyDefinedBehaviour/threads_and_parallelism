@@ -1,12 +1,9 @@
 use super::Matrix;
 
 pub fn multiply<T: std::ops::Mul<Output = T> + Send + Default + Copy>(
-  m1: impl Into<Matrix<T>>,
-  m2: impl Into<Matrix<T>>,
+  m1: &Matrix<T>,
+  m2: &Matrix<T>,
 ) -> Matrix<T> {
-  let m1 = m1.into();
-  let m2 = m2.into();
-
   let mut out = Matrix::new(m1.rows());
 
   for i in 0..m1.rows() {
@@ -26,10 +23,10 @@ mod tests {
   fn test_multiply() {
     assert_eq!(
       multiply(
-        [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
-        [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+        &vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]].into(),
+        &vec![vec![9, 8, 7], vec![6, 5, 4], vec![3, 2, 1]].into()
       ),
-      [[9, 12, 9], [32, 25, 12], [49, 32, 9]].into()
+      vec![vec![9, 12, 9], vec![32, 25, 12], vec![49, 32, 9]].into()
     );
   }
 }

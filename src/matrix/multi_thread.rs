@@ -1,33 +1,15 @@
 use super::Matrix;
 
 pub fn multiply<T: std::ops::Mul<Output = T> + Send + Default + Copy>(
-  m1: impl Into<Matrix<T>>,
-  m2: impl Into<Matrix<T>>,
+  m1: &Matrix<T>,
+  m2: &Matrix<T>,
 ) -> Matrix<T> {
-  /*
-  [
-    [1, 2, 3], | thread 1
-    [4, 5, 6], | thread 1
-    [7, 8, 9], | thread 2
-    [0, 4, 10] | thread 2
-  ]
-
-  [
-    [9, 8, 7], | thread 1
-    [6, 5, 4], | thread 1
-    [3, 2, 1], | thread 2
-    [4, 6, 12] | thread 2
-  ]
-  */
-  let mut m1 = m1.into();
-  let mut m2 = m2.into();
-
-  let m1_ptr = Ptr(&mut m1 as *mut Matrix<T> as *mut u8);
-  let m2_ptr = Ptr(&mut m2 as *mut Matrix<T> as *mut u8);
+  let m1_ptr = Ptr(m1 as *const Matrix<T> as *mut u8);
+  let m2_ptr = Ptr(m2 as *const Matrix<T> as *mut u8);
 
   let num_rows = m1.rows();
 
-  let mut out = Matrix::new(num_rows);
+  let mut out = m1.clone();
 
   let mut out_ptr = Ptr(&mut out as *mut Matrix<T> as *mut u8);
 
@@ -35,7 +17,7 @@ pub fn multiply<T: std::ops::Mul<Output = T> + Send + Default + Copy>(
 
   let subset_length = (num_rows as f64 / num_cpus as f64).floor() as usize + 1;
 
-  let mut threads = Vec::with_capacity(num_cpus);
+  let mut threads = Vec::with_capacity(num_cpus - 1);
 
   let mut i = 0;
 
@@ -57,6 +39,20 @@ pub fn multiply<T: std::ops::Mul<Output = T> + Send + Default + Copy>(
     }));
 
     i = subset_ends_at;
+
+    if threads.len() == num_cpus - 1 {
+      for i in subset_starts_at_row..std::cmp::min(subset_ends_at, num_rows) {
+        let m1: &Matrix<T> = m1_ptr.get_matrix();
+        let m2: &Matrix<T> = m2_ptr.get_matrix();
+        let out: &mut Matrix<T> = out_ptr.get_matrix_mut();
+
+        for j in 0..num_rows {
+          out.elements[j][i] = m1.elements[j][i] * m2.elements[i][j];
+        }
+      }
+
+      break;
+    }
   }
 
   for thread in threads.into_iter() {
@@ -91,16 +87,31 @@ impl Copy for Ptr {}
 
 #[cfg(test)]
 mod tests {
+  use std::time::Instant;
+
+  use crate::matrix::gen_matrix;
+
   use super::*;
 
   #[test]
   fn test_multiply() {
     assert_eq!(
       multiply(
-        [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
-        [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+        &vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]].into(),
+        &vec![vec![9, 8, 7], vec![6, 5, 4], vec![3, 2, 1]].into()
       ),
-      [[9, 12, 9], [32, 25, 12], [49, 32, 9]].into()
+      vec![vec![9, 12, 9], vec![32, 25, 12], vec![49, 32, 9]].into()
     );
+  }
+
+  #[ignore]
+  #[test]
+  fn debug() {
+    let m1: Matrix<i32> = gen_matrix(8192);
+    let m2: Matrix<i32> = gen_matrix(8192);
+
+    let start = Instant::now();
+    let _ = multiply(&m1, &m2);
+    println!("elapsed={:?}", start.elapsed());
   }
 }
