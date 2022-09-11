@@ -17,7 +17,7 @@ pub fn multiply<T: std::ops::Mul<Output = T> + Send + Default + Copy>(
 
   let subset_length = (num_rows as f64 / num_cpus as f64).floor() as usize + 1;
 
-  let mut threads = Vec::with_capacity(num_cpus - 1);
+  let mut threads = Vec::with_capacity(num_cpus);
 
   let mut i = 0;
 
@@ -39,20 +39,56 @@ pub fn multiply<T: std::ops::Mul<Output = T> + Send + Default + Copy>(
     }));
 
     i = subset_ends_at;
+  }
 
-    if threads.len() == num_cpus - 1 {
+  for thread in threads.into_iter() {
+    thread.join().unwrap();
+  }
+
+  out
+}
+
+pub fn positional_multiply<
+  T: std::ops::Mul<Output = T> + Send + Default + Copy + std::fmt::Debug,
+>(
+  m1: &Matrix<T>,
+  m2: &Matrix<T>,
+) -> Matrix<T> {
+  let m1_ptr = Ptr(m1 as *const Matrix<T> as *mut u8);
+  let m2_ptr = Ptr(m2 as *const Matrix<T> as *mut u8);
+
+  let num_rows = m1.rows();
+
+  let mut out = m1.clone();
+
+  let mut out_ptr = Ptr(&mut out as *mut Matrix<T> as *mut u8);
+
+  let num_cpus = num_cpus::get();
+
+  let subset_length = (num_rows as f64 / num_cpus as f64).floor() as usize + 1;
+
+  let mut threads = Vec::with_capacity(num_cpus);
+
+  let mut i = 0;
+
+  while i < num_rows {
+    let subset_starts_at_row = i;
+
+    let subset_ends_at = subset_starts_at_row + subset_length;
+
+    threads.push(std::thread::spawn(move || {
       for i in subset_starts_at_row..std::cmp::min(subset_ends_at, num_rows) {
         let m1: &Matrix<T> = m1_ptr.get_matrix();
         let m2: &Matrix<T> = m2_ptr.get_matrix();
         let out: &mut Matrix<T> = out_ptr.get_matrix_mut();
 
         for j in 0..num_rows {
-          out.elements[j][i] = m1.elements[j][i] * m2.elements[i][j];
+          out.elements[i][j] = m1.elements[i][j] * m2.elements[i][j];
         }
       }
+    }));
 
-      break;
-    }
+    i = subset_ends_at;
   }
 
   for thread in threads.into_iter() {
@@ -101,6 +137,17 @@ mod tests {
         &vec![vec![9, 8, 7], vec![6, 5, 4], vec![3, 2, 1]].into()
       ),
       vec![vec![9, 12, 9], vec![32, 25, 12], vec![49, 32, 9]].into()
+    );
+  }
+
+  #[test]
+  fn test_positional_multiply() {
+    assert_eq!(
+      positional_multiply(
+        &vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]].into(),
+        &vec![vec![9, 8, 7], vec![6, 5, 4], vec![3, 2, 1]].into()
+      ),
+      vec![vec![9, 16, 21], vec![24, 25, 24], vec![21, 16, 9]].into()
     );
   }
 

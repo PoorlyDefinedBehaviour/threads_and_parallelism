@@ -10,7 +10,7 @@ use criterion::{
 pub fn criterion_benchmark(c: &mut Criterion) {
   let sizes = [128, 256, 512, 1024, 2048, 4096, 8192];
 
-  let mut group = c.benchmark_group("matrix multiply");
+  let mut group = c.benchmark_group("Multiplicação matricial");
 
   for size in sizes.iter() {
     group.sample_size(10);
@@ -29,6 +29,30 @@ pub fn criterion_benchmark(c: &mut Criterion) {
       let m2 = gen_matrix(size);
 
       b.iter(|| matrix::multi_thread::multiply(&m1, &m2));
+    });
+  }
+
+  group.finish();
+
+  let mut group = c.benchmark_group("Multiplicação posicional");
+
+  for size in sizes.iter() {
+    group.sample_size(10);
+    group.sampling_mode(SamplingMode::Linear);
+    group.throughput(Throughput::Elements((size * size) as u64));
+
+    group.bench_with_input(BenchmarkId::new("singlethread", size), size, |b, &size| {
+      let m1 = gen_matrix(size);
+      let m2 = gen_matrix(size);
+
+      b.iter(|| matrix::single_thread::positional_multiply(&m1, &m2));
+    });
+
+    group.bench_with_input(BenchmarkId::new("multithread", size), size, |b, &size| {
+      let m1 = gen_matrix(size);
+      let m2 = gen_matrix(size);
+
+      b.iter(|| matrix::multi_thread::positional_multiply(&m1, &m2));
     });
   }
 
